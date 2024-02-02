@@ -16,10 +16,12 @@ public class Main {
 
     private static final String PERSONAL_TYPE = "PERSONAL";
 
+
     public static void main(String[] args) {
 
         //api key
-        final String apiKey = ""; //DONT LOOK AT MY KEY!
+
+        final String apiKey = new Secrets().getApiSecret();
 
         try {
             HttpClient client = buildHttpClient();
