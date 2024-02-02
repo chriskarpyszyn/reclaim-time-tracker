@@ -10,6 +10,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+import java.time.LocalDate;
 import java.util.List;
 
 public class Main {
@@ -23,16 +24,20 @@ public class Main {
 
         final String apiKey = new Secrets().getApiSecret();
 
+        final LocalDate today = LocalDate.now();
+        final LocalDate tomorrow = today.plusDays(1);
+
         try {
             HttpClient client = buildHttpClient();
-            HttpRequest request = buildHttpRequest(apiKey, buildRequestUrl("2024-02-02", "2024-02-03"));
+            HttpRequest request = buildHttpRequest(apiKey, buildRequestUrl(today.toString(), tomorrow.toString()));
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
             List<Event> myEvents = serializeResponse(response);
-//            System.out.println("Status Code: " + response.statusCode());
-//            System.out.println("Response Body: " + response.body());
+//          System.out.println("Status Code: " + response.statusCode());
+//          System.out.println("Response Body: " + response.body());
             TimeEntry timeEntry = new TimeEntry();
             for (Event e : myEvents) {
-//                System.out.println(e.getTitle() + "  " + e.getType());
+//              //adding a filter for large blocks, typically "all day" blocks.
+                //i quickly don't see an obvious field to track that.
                 if (e.getTimeChunks() <=30 && !e.getType().equals(PERSONAL_TYPE)) {
                     timeEntry.addTime(e);
                 }
