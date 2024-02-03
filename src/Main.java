@@ -30,6 +30,7 @@ public class Main {
         final LocalDate today = LocalDate.now();
         final LocalDate tomorrow = today.plusDays(1);
 
+        TimeEntry timeEntry = new TimeEntry();
         try {
             HttpClient client = buildHttpClient();
             HttpRequest request = buildHttpRequest(apiKey, buildRequestUrl(today.toString(), tomorrow.toString()));
@@ -37,7 +38,6 @@ public class Main {
             List<Event> myEvents = serializeResponse(response);
 //          System.out.println("Status Code: " + response.statusCode());
 //          System.out.println("Response Body: " + response.body());
-            TimeEntry timeEntry = new TimeEntry();
             for (Event e : myEvents) {
 //              //adding a filter for large blocks, typically "all day" blocks.
                 //i quickly don't see an obvious field to track that.
@@ -86,10 +86,14 @@ public class Main {
 
         //update the row
         if (rowIndex != -1) {
-            //we have the row index of the row with the date
-            String cellRange = secrets.getSpreadSheetTabName()+"!B" + (rowIndex+1); //B column
+            //Get the cell range of column b to d, at the found row
+            String cellRange = secrets.getSpreadSheetTabName()+"!B" + (rowIndex+1) + ":D" + (rowIndex+1);
+
             List<List<Object>> newValues = List.of(
-                    List.of(100) //todo-ck put in real values for the rows
+                    List.of(
+                            timeEntry.getTotalTime(),
+                            timeEntry.getIrapableTime(),
+                            timeEntry.getSredableTime()) //todo-ck put in real values for the rows
             );
 
             ValueRange body = new ValueRange().setValues(newValues);
@@ -101,6 +105,11 @@ public class Main {
             } catch (Exception e) {
                 e.printStackTrace();
             }
+
+            //TODO-ck need to update the NOTES field with titles from tasks
+            //irap notes in col J, SRED in col k
+            //requires 2 separate calls
+
             System.out.println("CELL UPDATED!");
 
         }
