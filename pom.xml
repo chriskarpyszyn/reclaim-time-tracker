@@ -38,6 +38,37 @@
             <artifactId>jackson-annotations</artifactId>
             <version>2.16.1</version>
         </dependency>
+
+        <!-- https://mvnrepository.com/artifact/com.google.api-client/google-api-client -->
+        <!-- todo-ck there is a vulnerability that needs to be addressed in this library -->
+        <dependency>
+            <groupId>com.google.api-client</groupId>
+            <artifactId>google-api-client</artifactId>
+            <version>1.35.1</version>
+        </dependency>
+
+        <!-- https://mvnrepository.com/artifact/com.google.apis/google-api-services-sheets -->
+        <!-- todo-ck there is a vulnerability that needs to be addressed in this library -->
+        <dependency>
+            <groupId>com.google.apis</groupId>
+            <artifactId>google-api-services-sheets</artifactId>
+            <version>v4-rev614-1.18.0-rc</version>
+        </dependency>
+
+        <!-- https://mvnrepository.com/artifact/com.google.auth/google-auth-library-oauth2-http -->
+        <!-- todo-ck there is a vulnerability that needs to be addressed in this library -->
+        <dependency>
+            <groupId>com.google.auth</groupId>
+            <artifactId>google-auth-library-oauth2-http</artifactId>
+            <version>1.22.0</version>
+        </dependency>
+
+        <!-- https://mvnrepository.com/artifact/com.google.http-client/google-http-client-jackson2 -->
+        <dependency>
+            <groupId>com.google.http-client</groupId>
+            <artifactId>google-http-client-jackson2</artifactId>
+            <version>1.44.1</version>
+        </dependency>
     </dependencies>
 
     <!-- Build Configuration -->

@@ -18,4 +18,12 @@ public class Secrets {
     public String getApiSecret() {
         return properties.getProperty("api.secret");
     }
+
+    public String getSpreadSheetId() {
+        return properties.getProperty("sheets.sheetId");
+    }
+
+    public String getSpreadSheetTabName() {
+        return properties.getProperty("sheets.tabName");
+    }
 }

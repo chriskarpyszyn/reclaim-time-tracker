@@ -2,6 +2,9 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.api.services.sheets.v4.Sheets;
+import com.google.api.services.sheets.v4.model.ValueRange;
+import gsheetsapi.SheetsServiceUtil;
 import reclaimapi.Event;
 import sredtimesheet.TimeEntry;
 
@@ -21,8 +24,8 @@ public class Main {
     public static void main(String[] args) {
 
         //api key
-
-        final String apiKey = new Secrets().getApiSecret();
+        final Secrets secrets = new Secrets();
+        final String apiKey = secrets.getApiSecret();
 
         final LocalDate today = LocalDate.now();
         final LocalDate tomorrow = today.plusDays(1);
@@ -47,9 +50,63 @@ public class Main {
             System.out.println("Total Sredable Time: " + timeEntry.getSredableTime());
             System.out.println("Total Irapable Time: " + timeEntry.getIrapableTime());
         } catch (Exception e) {
-            System.out.println("Crap!");
             e.printStackTrace();
         }
+
+        //spreadsheet id and range
+        final String sheetId = secrets.getSpreadSheetId();
+        String range = secrets.getSpreadSheetTabName()+"!A:A";
+
+        //find the row
+        List<List<Object>> sheetsResponseValues = null;
+        Sheets sheetsService = null;
+        try {
+            sheetsService = SheetsServiceUtil.getSheetsService("src/resources/never-update-a-timesheet-abc8359b0609.json");
+            Sheets.Spreadsheets.Values.Get request = sheetsService.spreadsheets().values().get(sheetId, range);
+            ValueRange sheetsResponse = request.execute();
+            sheetsResponseValues = sheetsResponse.getValues();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        int rowIndex = -1;
+        String searchValue = "Feb 2 (Fri)"; //todo-ck need to generate this string
+
+        if (sheetsResponseValues == null || sheetsResponseValues.isEmpty()) {
+            System.out.println("No Data Found.");
+        } else {
+            for (List row : sheetsResponseValues) {
+                rowIndex++;
+                if (!row.isEmpty() && row.get(0).toString().equals(searchValue)) {
+                    System.out.println("Found the row at: " + (rowIndex+1));
+                    break;
+                }
+            }
+        }
+
+        //update the row
+        if (rowIndex != -1) {
+            //we have the row index of the row with the date
+            String cellRange = secrets.getSpreadSheetTabName()+"!B" + (rowIndex+1); //B column
+            List<List<Object>> newValues = List.of(
+                    List.of(100) //todo-ck put in real values for the rows
+            );
+
+            ValueRange body = new ValueRange().setValues(newValues);
+            try {
+                sheetsService.spreadsheets().values()
+                        .update(sheetId, cellRange, body)
+                        .setValueInputOption("USER_ENTERED")
+                        .execute();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            System.out.println("CELL UPDATED!");
+
+        }
+
+
+
     }
 
     private static List<Event> serializeResponse(HttpResponse response) throws JsonProcessingException {
