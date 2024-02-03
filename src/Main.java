@@ -20,6 +20,7 @@ import java.util.List;
 public class Main {
 
     private static final String PERSONAL_TYPE = "PERSONAL";
+    private static final String USER_ENTERED = "USER_ENTERED";
 
 
     public static void main(String[] args) {
@@ -44,6 +45,7 @@ public class Main {
                 //i quickly don't see an obvious field to track that.
                 if (e.getTimeChunks() <=30 && !e.getType().equals(PERSONAL_TYPE)) {
                     timeEntry.addTime(e);
+                    timeEntry.addDescription(e);
                 }
             }
             System.out.println("TimeEntry for: " + timeEntry.getEntryDate());
@@ -91,20 +93,36 @@ public class Main {
         //update the row
         if (rowIndex != -1) {
             //Get the cell range of column b to d, at the found row
-            String cellRange = secrets.getSpreadSheetTabName()+"!B" + (rowIndex+1) + ":D" + (rowIndex+1);
-
-            List<List<Object>> newValues = List.of(
+            final String timeCellRange = secrets.getSpreadSheetTabName()+"!B" + (rowIndex+1) + ":D" + (rowIndex+1);
+            final List<List<Object>> timeValues = List.of(
                     List.of(
                             timeEntry.getTotalTime(),
                             timeEntry.getIrapableTime(),
-                            timeEntry.getSredableTime()) //todo-ck put in real values for the rows
+                            timeEntry.getSredableTime()
+                    )
             );
-
-            ValueRange body = new ValueRange().setValues(newValues);
+            final ValueRange timeBody = new ValueRange().setValues(timeValues);
             try {
                 sheetsService.spreadsheets().values()
-                        .update(sheetId, cellRange, body)
-                        .setValueInputOption("USER_ENTERED")
+                        .update(sheetId, timeCellRange, timeBody)
+                        .setValueInputOption(USER_ENTERED)
+                        .execute();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+
+            final String descriptionCellRange = secrets.getSpreadSheetTabName()+"!J" + (rowIndex+1) + ":K" + (rowIndex+1);
+            final List<List<Object>> descriptionValues = List.of(
+                    List.of(
+                            timeEntry.getIrapDescription(),
+                            timeEntry.getSredDescription()
+                    )
+            );
+            final ValueRange descriptionBody = new ValueRange().setValues(descriptionValues);
+            try {
+                sheetsService.spreadsheets().values()
+                        .update(sheetId, descriptionCellRange, descriptionBody)
+                        .setValueInputOption(USER_ENTERED)
                         .execute();
             } catch (Exception e) {
                 e.printStackTrace();

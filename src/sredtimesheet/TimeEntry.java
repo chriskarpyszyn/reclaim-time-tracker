@@ -6,25 +6,55 @@ import java.time.LocalDate;
 
 public class TimeEntry
 {
+    private LocalDate entryDate;
     private float totalTime;
     private float sredableTime;
     private float irapableTime;
-    private LocalDate entryDate;
+    private String sredDescription;
+    private String irapDescription;
+
 
     public TimeEntry() {
         this.entryDate = LocalDate.now();
         this.totalTime = 0;
         this.sredableTime = 0;
         this.irapableTime = 0;
+        this.sredDescription = "";
+        this.irapDescription = "";
     }
 
     public void addTime(Event e) {
-        if (e.getTitle().contains("SRED:")) {
+        if (isSred(e)) {
             sredableTime += calculateHoursFromEvent(e);
-        } else if (e.getTitle().contains("IRAP: ")) {
+        } else if (isIrap(e)) {
             irapableTime += calculateHoursFromEvent(e);
         }
         totalTime += calculateHoursFromEvent(e);
+    }
+
+    public void addDescription(Event e) {
+        if (isSred(e)) {
+            sredDescription = createOrAppendDescription(e, sredDescription);
+        } else if (isIrap(e)) {
+            irapDescription = createOrAppendDescription(e, irapDescription);
+        }
+    }
+
+    private String createOrAppendDescription(Event e, String description) {
+        int subStringStartIndex = 6;
+        if (description.equals("")) {
+            return e.getTitle().substring(subStringStartIndex);
+        } else {
+            return description + " & " + e.getTitle().substring(subStringStartIndex);
+        }
+    }
+
+    private boolean isSred(Event e) {
+        return e.getTitle().contains("SRED:");
+    }
+
+    private boolean isIrap(Event e) {
+        return e.getTitle().contains("IRAP:");
     }
 
     private float calculateHoursFromEvent(Event e) {
@@ -45,5 +75,13 @@ public class TimeEntry
 
     public LocalDate getEntryDate() {
         return entryDate;
+    }
+
+    public String getSredDescription() {
+        return sredDescription;
+    }
+
+    public String getIrapDescription() {
+        return irapDescription;
     }
 }
