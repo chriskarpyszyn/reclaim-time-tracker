@@ -14,6 +14,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 public class Main {
@@ -70,7 +71,10 @@ public class Main {
         }
 
         int rowIndex = -1;
-        String searchValue = "Feb 2 (Fri)"; //todo-ck need to generate this string
+
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MMM d (E)");
+        String searchValue = today.format(formatter);
+        System.out.println("Date Search String: " + searchValue);
 
         if (sheetsResponseValues == null || sheetsResponseValues.isEmpty()) {
             System.out.println("No Data Found.");
