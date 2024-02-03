@@ -8,6 +8,7 @@ import gsheetsapi.SheetsServiceUtil;
 import reclaimapi.Event;
 import sredtimesheet.TimeEntry;
 
+import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -21,51 +22,45 @@ public class Main {
 
     private static final String PERSONAL_TYPE = "PERSONAL";
     private static final String USER_ENTERED = "USER_ENTERED";
-
+    public static final String SHEETS_SECRET_JSON = "src/resources/never-update-a-timesheet-abc8359b0609.json";
 
     public static void main(String[] args) {
-
         //api key
         final Secrets secrets = new Secrets();
         final String apiKey = secrets.getApiSecret();
 
+        //today and tomorrow!
         final LocalDate today = LocalDate.now();
         final LocalDate tomorrow = today.plusDays(1);
+        final String dateStringToSearchFor = today.format(DateTimeFormatter.ofPattern("MMM d (E)"));
 
         TimeEntry timeEntry = new TimeEntry();
         try {
-            HttpClient client = buildHttpClient();
-            HttpRequest request = buildHttpRequest(apiKey, buildRequestUrl(today.toString(), tomorrow.toString()));
-            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-            List<Event> myEvents = serializeResponse(response);
-//          System.out.println("Status Code: " + response.statusCode());
-//          System.out.println("Response Body: " + response.body());
+            final HttpClient client = buildHttpClient();
+            final HttpRequest request = buildHttpRequest(apiKey, buildRequestUrl(today.toString(), tomorrow.toString()));
+            final HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            final List<Event> myEvents = serializeResponse(response);
             for (Event e : myEvents) {
-//              //adding a filter for large blocks, typically "all day" blocks.
-                //i quickly don't see an obvious field to track that.
+                //todo-ck figure out a better way to filter out all-day time blocks, this <=30 hack should work for now
                 if (e.getTimeChunks() <=30 && !e.getType().equals(PERSONAL_TYPE)) {
                     timeEntry.addTime(e);
                     timeEntry.addDescription(e);
                 }
             }
-            System.out.println("TimeEntry for: " + timeEntry.getEntryDate());
-            System.out.println("Total Time Today: " + timeEntry.getTotalTime());
-            System.out.println("Total Sredable Time: " + timeEntry.getSredableTime());
-            System.out.println("Total Irapable Time: " + timeEntry.getIrapableTime());
         } catch (Exception e) {
             e.printStackTrace();
         }
 
         //spreadsheet id and range
         final String sheetId = secrets.getSpreadSheetId();
-        String range = secrets.getSpreadSheetTabName()+"!A:A";
+        final String dateRange = secrets.getSpreadSheetTabName()+"!A:A";
 
-        //find the row
+        //find the row to edit
         List<List<Object>> sheetsResponseValues = null;
         Sheets sheetsService = null;
         try {
-            sheetsService = SheetsServiceUtil.getSheetsService("src/resources/never-update-a-timesheet-abc8359b0609.json");
-            Sheets.Spreadsheets.Values.Get request = sheetsService.spreadsheets().values().get(sheetId, range);
+            sheetsService = SheetsServiceUtil.getSheetsService(SHEETS_SECRET_JSON);
+            Sheets.Spreadsheets.Values.Get request = sheetsService.spreadsheets().values().get(sheetId, dateRange);
             ValueRange sheetsResponse = request.execute();
             sheetsResponseValues = sheetsResponse.getValues();
         } catch (Exception e) {
@@ -74,16 +69,12 @@ public class Main {
 
         int rowIndex = -1;
 
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MMM d (E)");
-        String searchValue = today.format(formatter);
-        System.out.println("Date Search String: " + searchValue);
-
         if (sheetsResponseValues == null || sheetsResponseValues.isEmpty()) {
             System.out.println("No Data Found.");
         } else {
             for (List row : sheetsResponseValues) {
                 rowIndex++;
-                if (!row.isEmpty() && row.get(0).toString().equals(searchValue)) {
+                if (!row.isEmpty() && row.get(0).toString().equals(dateStringToSearchFor)) {
                     System.out.println("Found the row at: " + (rowIndex+1));
                     break;
                 }
@@ -94,50 +85,35 @@ public class Main {
         if (rowIndex != -1) {
             //Get the cell range of column b to d, at the found row
             final String timeCellRange = secrets.getSpreadSheetTabName()+"!B" + (rowIndex+1) + ":D" + (rowIndex+1);
-            final List<List<Object>> timeValues = List.of(
-                    List.of(
-                            timeEntry.getTotalTime(),
-                            timeEntry.getIrapableTime(),
-                            timeEntry.getSredableTime()
-                    )
+            final List<List<Object>> timeValues = List.of(List.of(
+                            timeEntry.getTotalTime(), timeEntry.getIrapableTime(), timeEntry.getSredableTime())
             );
-            final ValueRange timeBody = new ValueRange().setValues(timeValues);
             try {
-                sheetsService.spreadsheets().values()
-                        .update(sheetId, timeCellRange, timeBody)
-                        .setValueInputOption(USER_ENTERED)
-                        .execute();
+                executeSheetsUpdate(sheetsService, sheetId, timeCellRange, timeValues);
             } catch (Exception e) {
                 e.printStackTrace();
             }
 
             final String descriptionCellRange = secrets.getSpreadSheetTabName()+"!J" + (rowIndex+1) + ":K" + (rowIndex+1);
-            final List<List<Object>> descriptionValues = List.of(
-                    List.of(
-                            timeEntry.getIrapDescription(),
-                            timeEntry.getSredDescription()
-                    )
+            final List<List<Object>> descriptionValues = List.of(List.of(
+                            timeEntry.getIrapDescription(), timeEntry.getSredDescription())
             );
-            final ValueRange descriptionBody = new ValueRange().setValues(descriptionValues);
             try {
-                sheetsService.spreadsheets().values()
-                        .update(sheetId, descriptionCellRange, descriptionBody)
-                        .setValueInputOption(USER_ENTERED)
-                        .execute();
+                executeSheetsUpdate(sheetsService, sheetId, descriptionCellRange, descriptionValues);
             } catch (Exception e) {
                 e.printStackTrace();
             }
 
-            //TODO-ck need to update the NOTES field with titles from tasks
-            //irap notes in col J, SRED in col k
-            //requires 2 separate calls
-
             System.out.println("CELL UPDATED!");
-
         }
+    }
 
-
-
+    private static void executeSheetsUpdate(Sheets sheetsService, String sheetId, String cellRange, List<List<Object>> listOfListOfValues) throws IOException {
+        final ValueRange body = new ValueRange().setValues(listOfListOfValues);
+        sheetsService.spreadsheets().values()
+                .update(sheetId, cellRange, body)
+                .setValueInputOption(USER_ENTERED)
+                .execute();
     }
 
     private static List<Event> serializeResponse(HttpResponse response) throws JsonProcessingException {
