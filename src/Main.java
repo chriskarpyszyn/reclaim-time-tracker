@@ -63,7 +63,7 @@ public class Main {
             //Get the cell range of column b to d, at the found row
             final String timeCellRange = secrets.getSpreadSheetTabName()+"!B" + (rowIndex+1) + ":D" + (rowIndex+1);
             final List<List<Object>> timeValues = List.of(List.of(
-                            timeEntry.getTotalTime(), timeEntry.getIrapableTime(), timeEntry.getSredableTime())
+                            timeEntry.getRegularTime(), timeEntry.getIrapableTime(), timeEntry.getSredableTime())
             );
             try {
                 executeSheetsUpdate(sheetsService, sheetId, timeCellRange, timeValues);

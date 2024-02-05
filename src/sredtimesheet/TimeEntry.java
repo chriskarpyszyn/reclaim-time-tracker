@@ -7,7 +7,7 @@ import java.time.LocalDate;
 public class TimeEntry
 {
     private LocalDate entryDate;
-    private float totalTime;
+    private float regularTime;
     private float sredableTime;
     private float irapableTime;
     private String sredDescription;
@@ -16,7 +16,7 @@ public class TimeEntry
 
     public TimeEntry() {
         this.entryDate = LocalDate.now();
-        this.totalTime = 0;
+        this.regularTime = 0;
         this.sredableTime = 0;
         this.irapableTime = 0;
         this.sredDescription = "";
@@ -28,8 +28,9 @@ public class TimeEntry
             sredableTime += calculateHoursFromEvent(e);
         } else if (isIrap(e)) {
             irapableTime += calculateHoursFromEvent(e);
+        } else {
+
         }
-        totalTime += calculateHoursFromEvent(e);
     }
 
     public void addDescription(Event e) {
@@ -37,9 +38,12 @@ public class TimeEntry
             sredDescription = createOrAppendDescription(e, sredDescription);
         } else if (isIrap(e)) {
             irapDescription = createOrAppendDescription(e, irapDescription);
+        } else {
+            regularTime += calculateHoursFromEvent(e);
         }
     }
 
+    //todo-ck ignore the "Do Not Book" blocks
     //todo-ck instead of substring, remove the word "SRED:" or "IRAP:" and maybe icons
     //that reclaim adds
     private String createOrAppendDescription(Event e, String description) {
@@ -63,8 +67,8 @@ public class TimeEntry
         return (float)(e.getTimeChunks() * 15) /60;
     }
 
-    public float getTotalTime() {
-        return totalTime;
+    public float getRegularTime() {
+        return regularTime;
     }
 
     public float getSredableTime() {
