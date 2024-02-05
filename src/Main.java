@@ -4,6 +4,7 @@ import config.Secrets;
 import gsheetsapi.SheetsServiceUtil;
 import reclaimapi.Event;
 import sredtimesheet.EventFetcher;
+import sredtimesheet.EventProcessor;
 import sredtimesheet.HttpClientManager;
 import sredtimesheet.TimeEntry;
 
@@ -15,35 +16,19 @@ import java.util.List;
 
 public class Main {
 
-    private static final String PERSONAL_TYPE = "PERSONAL";
+
     private static final String USER_ENTERED = "USER_ENTERED";
     public static final String SHEETS_SECRET_JSON = "src/resources/never-update-a-timesheet-abc8359b0609.json";
 
-    public static void main(String[] args) {
-        //api key
-        final Secrets secrets = new Secrets();
-        final String apiKey = secrets.getApiSecret();
+    public static void main(String[] args) throws IOException, InterruptedException {
+        final HttpClient httpClient = new HttpClientManager().getHttpClient();
+        final List<Event> myEvents = new EventFetcher(httpClient).fetchEvents();
+        final TimeEntry timeEntry = new EventProcessor(myEvents).processEvents();
 
-        //today and tomorrow!
-        final LocalDate today = LocalDate.now();
-        final String dateStringToSearchFor = today.format(DateTimeFormatter.ofPattern("MMM d (E)"));
 
-        TimeEntry timeEntry = new TimeEntry();
-        try {
-            final HttpClient httpClient = new HttpClientManager().getHttpClient();
-            final List<Event> myEvents = new EventFetcher(httpClient).fetchEvents();
-            for (Event e : myEvents) {
-                //todo-ck figure out a better way to filter out all-day time blocks, this <=30 hack should work for now
-                if (e.getTimeChunks() <=30 && !e.getType().equals(PERSONAL_TYPE)) {
-                    timeEntry.addTime(e);
-                    timeEntry.addDescription(e);
-                }
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
+        //todo-ck refactor below into a "SheetsUpdater" class
         //spreadsheet id and range
+        final Secrets secrets = new Secrets();
         final String sheetId = secrets.getSpreadSheetId();
         final String dateRange = secrets.getSpreadSheetTabName()+"!A:A";
 
@@ -66,7 +51,7 @@ public class Main {
         } else {
             for (List row : sheetsResponseValues) {
                 rowIndex++;
-                if (!row.isEmpty() && row.get(0).toString().equals(dateStringToSearchFor)) {
+                if (!row.isEmpty() && row.get(0).toString().equals(formatDateToSearchableString(LocalDate.now()))) {
                     System.out.println("Found the row at: " + (rowIndex+1));
                     break;
                 }
@@ -98,6 +83,10 @@ public class Main {
 
             System.out.println("CELL UPDATED!");
         }
+    }
+
+    private static String formatDateToSearchableString(LocalDate date) {
+        return date.format(DateTimeFormatter.ofPattern("MMM d (E)"));
     }
 
     private static void executeSheetsUpdate(Sheets sheetsService, String sheetId, String cellRange, List<List<Object>> listOfListOfValues) throws IOException {
