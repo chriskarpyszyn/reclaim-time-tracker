@@ -1,19 +1,14 @@
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.api.services.sheets.v4.Sheets;
 import com.google.api.services.sheets.v4.model.ValueRange;
+import config.Secrets;
 import gsheetsapi.SheetsServiceUtil;
 import reclaimapi.Event;
+import sredtimesheet.EventFetcher;
+import sredtimesheet.HttpClientManager;
 import sredtimesheet.TimeEntry;
 
 import java.io.IOException;
-import java.net.URI;
 import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.time.Duration;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -31,15 +26,12 @@ public class Main {
 
         //today and tomorrow!
         final LocalDate today = LocalDate.now();
-        final LocalDate tomorrow = today.plusDays(1);
         final String dateStringToSearchFor = today.format(DateTimeFormatter.ofPattern("MMM d (E)"));
 
         TimeEntry timeEntry = new TimeEntry();
         try {
-            final HttpClient client = buildHttpClient();
-            final HttpRequest request = buildHttpRequest(apiKey, buildRequestUrl(today.toString(), tomorrow.toString()));
-            final HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-            final List<Event> myEvents = serializeResponse(response);
+            final HttpClient httpClient = new HttpClientManager().getHttpClient();
+            final List<Event> myEvents = new EventFetcher(httpClient).fetchEvents();
             for (Event e : myEvents) {
                 //todo-ck figure out a better way to filter out all-day time blocks, this <=30 hack should work for now
                 if (e.getTimeChunks() <=30 && !e.getType().equals(PERSONAL_TYPE)) {
@@ -114,41 +106,5 @@ public class Main {
                 .update(sheetId, cellRange, body)
                 .setValueInputOption(USER_ENTERED)
                 .execute();
-    }
-
-    private static List<Event> serializeResponse(HttpResponse response) throws JsonProcessingException {
-        ObjectMapper objectMapper = new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-        return objectMapper.readValue(response.body().toString(), new TypeReference<>() {});
-    }
-
-    private static HttpRequest buildHttpRequest(String apiKey, String url) {
-        return HttpRequest.newBuilder()
-                .uri(URI.create(url))
-                .timeout(Duration.ofMinutes(2))
-                .header("Authorization", "Bearer " + apiKey)
-                .GET()
-                .build();
-    }
-
-    private static HttpClient buildHttpClient() {
-        return HttpClient.newBuilder()
-                .version(HttpClient.Version.HTTP_1_1)
-                .followRedirects(HttpClient.Redirect.NORMAL)
-                .connectTimeout(Duration.ofSeconds(20))
-                .build();
-    }
-
-    private static String buildRequestUrl(String start, String end) {
-        //https://api.app.reclaim.ai/api/events?start=2024-02-02&end=2024-02-03&sourceDetails=true&calendarIds=680951%2C1391596
-        final String base_url = "https://api.app.reclaim.ai/api/";
-        final String api = "events";
-        final String sourceDetails = "true";
-        final String calendarIds = "2C1391596";
-
-        return base_url + api +
-                "?start=" + start +
-                "&end=" + end +
-                "&sourceDtails=" + sourceDetails +
-                "&calendarIds=" + calendarIds;
     }
 }
