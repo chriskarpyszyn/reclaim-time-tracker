@@ -40,6 +40,8 @@ public class TimeEntry
         }
     }
 
+    //todo-ck instead of substring, remove the word "SRED:" or "IRAP:" and maybe icons
+    //that reclaim adds
     private String createOrAppendDescription(Event e, String description) {
         int subStringStartIndex = 6;
         if (description.equals("")) {
