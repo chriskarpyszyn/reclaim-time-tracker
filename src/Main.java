@@ -21,8 +21,9 @@ public class Main {
     public static final String SHEETS_SECRET_JSON = "src/resources/never-update-a-timesheet-abc8359b0609.json";
 
     public static void main(String[] args) throws IOException, InterruptedException {
+        final LocalDate now = LocalDate.now();
         final HttpClient httpClient = new HttpClientManager().getHttpClient();
-        final List<Event> myEvents = new EventFetcher(httpClient).fetchEvents();
+        final List<Event> myEvents = new EventFetcher(httpClient, now).fetchEvents();
         final TimeEntry timeEntry = new EventProcessor(myEvents).processEvents();
 
 
@@ -51,7 +52,7 @@ public class Main {
         } else {
             for (List row : sheetsResponseValues) {
                 rowIndex++;
-                if (!row.isEmpty() && row.get(0).toString().equals(formatDateToSearchableString(LocalDate.now()))) {
+                if (!row.isEmpty() && row.get(0).toString().equals(formatDateToSearchableString(now))) {
                     System.out.println("Found the row at: " + (rowIndex+1));
                     break;
                 }

@@ -26,10 +26,9 @@ public class EventFetcher
     private LocalDate today;
     private LocalDate tomorrow;
 
-    public EventFetcher(HttpClient httpClient) {
+    public EventFetcher(HttpClient httpClient, LocalDate today) {
         this.httpClient = httpClient;
         this.apiKey = new Secrets().getApiSecret();
-        final LocalDate today = LocalDate.now();
         final LocalDate tomorrow = today.plusDays(1);
         this.httpRequest = buildHttpRequest(this.apiKey, buildRequestUrl(today.toString(), tomorrow.toString()));
     }
